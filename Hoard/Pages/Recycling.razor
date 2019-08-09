@@ -1,0 +1,335 @@
+﻿@page "/recycling"
+@using Hoard.Data
+@using Microsoft.AspNetCore.Components
+@using BlazorStrap;
+@inject IUriHelper UriHelper
+@inject HoardDataService DataService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
+    <Authorized>
+
+        <div class="container">
+            <div class="btn-toolbar justify-content-between" role="toolbar" aria-label="Toolbar with button groups">
+                <h3>Recycling</h3>
+                @if (Projects?.Count > 0 || Notes?.Count > 0 || Entries?.Count > 0)
+                {
+                    <div class="input-group">
+                        <button type="button" class="btn btn-primary pull-right" @onclick=@OnDeleteAll>Delete All</button>
+                    </div>
+                }
+                </div>
+        </div>
+
+        <br />
+
+
+
+        @if (Projects?.Count > 0 || Notes?.Count > 0 || Entries?.Count > 0)
+        {
+            @if (Projects != null && Projects.Count > 0)
+            {
+                <div class="container">
+                    <h4>Projects</h4>
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%">Name</th>
+                                <th style="width: 60%">Description</th>
+                                <th style="width: 10%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var project in Projects)
+                            {
+                                var id = project.Id;
+
+                                <tr>
+                                    <td>@project.Name</td>
+                                    <td>@project.Description</td>
+                                    <td>
+                                        <a href="javascript:void(0)" @onclick=@(() => OnRestoreProject(id))>
+                                            <span class="oi oi-action-undo pl-2" aria-hidden="true" />
+                                        </a>
+                                        <a href="javascript:void(0)" @onclick=@(() => OnDeleteProject(id))>
+                                            <span class="oi oi-trash pl-2" aria-hidden="true" />
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <br />
+                <br />
+            }
+
+
+            @if (Notes != null && Notes.Count > 0)
+            {
+                <div class="container">
+                    <h4>Notes</h4>
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 70%">Text</th>
+                                <th style="width: 20%">Project</th>
+                                <th style="width: 10%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var note in Notes)
+                            {
+                                var id = note.Id;
+
+                            <tr>
+                                <td>@note.TextContent</td>
+                                <td>@Projects.FirstOrDefault(x => x.Id == note.ProjectId)?.Name</td>
+                                <td>
+                                    <a href="javascript:void(0)" @onclick=@(() => OnRestoreNote(id))>
+                                        <span class="oi oi-action-undo pl-2" aria-hidden="true" />
+                                    </a>
+                                    <a href="javascript:void(0)" @onclick=@(() => OnDeleteNote(id))>
+                                        <span class="oi oi-trash pl-2" aria-hidden="true" />
+                                    </a>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <br />
+                <br />
+            }
+
+            @if (Entries != null && Entries.Count > 0)
+            {
+                <div class="container">
+                    <h4>Entries</h4>
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 70%">Text</th>
+                                <th style="width: 20%">Project</th>
+                                <th style="width: 10%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Entries)
+                            {
+                                var id = entry.Id;
+
+                            <tr>
+                                <td>@entry.TextContent</td>
+                                <td>@Projects.FirstOrDefault(x => x.Id == entry.ProjectId)?.Name</td>
+                                <td>
+                                    <a href="javascript:void(0)" @onclick=@(() => OnRestoreEntry(id))>
+                                        <span class="oi oi-action-undo pl-2" aria-hidden="true" />
+                                    </a>
+                                    <a href="javascript:void(0)" @onclick=@(() => OnDeleteEntry(id))>
+                                        <span class="oi oi-trash pl-2" aria-hidden="true" />
+                                    </a>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <br />
+                <br />
+            }
+        }
+        else
+        {
+    <div class="container">
+        <div class="alert alert-primary" role="alert">
+            Your recycle bin is empty!
+        </div>
+    </div>
+                
+         }
+
+        </Authorized>
+    <NotAuthorized>
+        You're not logged in.
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code
+{
+    public List<Project> Projects { get; set; } = new List<Project>();
+    public List<Note> Notes { get; set; } = new List<Note>();
+    public List<Entry> Entries { get; set; } = new List<Entry>();
+
+    protected async override Task OnInitAsync()
+    {
+        var userId = await UserIdentityName();
+        if (userId == null) return;
+
+        Projects = await DataService.GetProjectsAsync(userId, true);
+        Notes = await DataService.GetDeletedNotesByUser(userId);
+        Entries = await DataService.GetDeletedEntriesByUser(userId);
+    }
+
+    public async void OnDeleteAll(UIMouseEventArgs e)
+    {
+        var userId = await UserIdentityName();
+        if (userId == null) return;
+
+        // delete project and linked items (deleted in DeleteProject method)
+        foreach (var item in Projects)
+        {
+            await DataService.DeleteProjectAsync(item.Id, userId, true);
+            Notes = Notes.Where(x => x.ProjectId != item.Id).ToList();
+            Entries = Entries.Where(x => x.ProjectId != item.Id).ToList();
+        }
+        Projects.Clear();
+
+        // delete remaining notes
+        foreach (var item in Notes)
+        {
+            await DataService.DeleteNoteAsync(item.Id, userId, true);
+        }
+        Notes.Clear();
+
+        // delete remaining entries
+        foreach (var item in Entries)
+        {
+            await DataService.DeleteEntryAsync(item.Id, userId, true);
+        }
+        Entries.Clear();
+
+        this.StateHasChanged();
+        
+    }
+
+    public async Task OnDeleteProject(string id)
+    {
+        var userId = await UserIdentityName();
+        if (userId == null) return;
+
+        var project = Projects.First(x => x.Id == id);
+        if (project != null)
+        {
+            if (await DataService.DeleteProjectAsync(id, userId, true))
+            {
+                Projects.Remove(project);
+
+                var notes = Notes.Where(x => x.ProjectId == id).ToList();
+                foreach (var note in notes)
+                {
+                    Notes.Remove(note);
+                }
+
+                var entries = Entries.Where(x => x.ProjectId == id).ToList();
+                foreach (var entry in entries)
+                {
+                    Entries.Remove(entry);
+                }
+
+                this.StateHasChanged();
+            }
+        }
+    }
+
+    public async Task OnDeleteNote(string id)
+    {
+        var userId = await UserIdentityName();
+        if (userId == null) return;
+
+        var note = Notes.FirstOrDefault(x => x.Id == id);
+        if (note != null)
+        {
+            await DataService.DeleteNoteAsync(id, userId, true);
+            Notes.Remove(note);
+            this.StateHasChanged();
+        }
+
+    }
+
+    public async Task OnDeleteEntry(string id)
+    {
+        var userId = await UserIdentityName();
+        if (userId == null) return;
+
+        var entry = Entries.FirstOrDefault(x => x.Id == id);
+        if (entry != null)
+        {
+            await DataService.DeleteEntryAsync(id, userId, true);
+            Entries.Remove(entry);
+            this.StateHasChanged();
+        }
+    }
+
+    public async Task OnRestoreProject(string id)
+    {
+        try
+        {
+            var userId = await UserIdentityName();
+            if (userId == null) return;
+
+            var project = Projects.FirstOrDefault(x => x.Id == id);
+            if(project != null)
+            {
+                await DataService.RestoreProjectAsync(id, userId);
+                Projects.Remove(project);
+
+                var notes = Notes.Where(x => x.ProjectId == project.Id).ToList();
+                foreach(var note in notes)
+                {
+                    Notes.Remove(note);
+                }
+
+                var entries = Entries.Where(x => x.ProjectId == project.Id).ToList();
+                foreach(var entry in entries)
+                {
+                    Entries.Remove(entry);
+                }
+
+                this.StateHasChanged();
+            }
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine("Exception restoring project, {0}", e);
+        }
+
+    }
+
+    public async Task OnRestoreNote(string id)
+    {
+        var note = Notes.FirstOrDefault(x => x.Id == id);
+        if(note != null)
+        {
+            note.IsDeleted = false;
+            await DataService.SaveNoteAsync(note);
+            Notes.Remove(note);
+            this.StateHasChanged();
+        }
+    }
+
+    public async Task OnRestoreEntry(string id)
+    {
+        var entry = Entries.FirstOrDefault(x => x.Id == id);
+        if(entry != null)
+        {
+            entry.IsDeleted = false;
+            await DataService.SaveEntryAsync(entry);
+            Entries.Remove(entry);
+            this.StateHasChanged();
+        }
+    }
+
+    private async Task<string> UserIdentityName()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            return user.Identity.Name;
+        }
+
+        return null;
+    }
+}

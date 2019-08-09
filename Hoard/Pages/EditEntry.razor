@@ -1,0 +1,154 @@
+﻿@page "/project/{ProjectId}/entry"
+@page "/project/{ProjectId}/entry/{EntryId}"
+@using Hoard.Data
+@using Microsoft.AspNetCore.Components
+@inject IUriHelper UriHelper
+@inject HoardDataService DataService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JsRuntime
+
+<div class="container">
+    <div class="btn-toolbar justify-content-between" role="toolbar" aria-label="Toolbar with button groups">
+        <h3>Edit Entry</h3>
+        <div class="input-group">
+            <button type="button" class="btn btn-primary pull-right" @onclick=@OnSave>Save</button>
+            <button type="button" class="btn btn-primary pull-right ml-3" @onclick=@OnCancel>Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12 px-3">
+            <div class="form-group mx-0 row border rounded">
+
+                <label class="col-sm-2 col-form-label bg-light border-right border-bottom text-truncate">Text</label>
+                <div class="col-sm-10 border-bottom px-2">
+                    <textarea type="text" rows="8" class="form-control border-0" id="input1" @bind="@TextContent" />
+                </div>
+
+                <label class="col-sm-2 col-form-label bg-light border-right border-bottom text-truncate">Tags</label>
+                <div class="col-sm-10 border-bottom px-2">
+                    <input type="text" class="form-control border-0" id="input2" @bind=@Tags />
+                </div>
+
+                <label class="col-sm-2 col-form-label bg-light border-right border-bottom text-truncate">Source</label>
+                <div class="col-sm-10 border-bottom px-2">
+                    <input type="text" class="form-control border-0" id="input4" @bind=@Source />
+                </div>
+
+                <label class="col-sm-2 col-form-label bg-light border-right border-bottom text-truncate">Image</label>
+                <div class="col-sm-8 border-bottom px-2">
+
+                    @if (!string.IsNullOrEmpty(Image))
+                    {
+                        <img src="@Image" class="img-fluid" />
+                        <br />
+                        <br />
+                    }
+
+                </div>
+
+                <div class="col-sm-2 border-bottom px-2">
+
+                    <input @ref=@fileUpload style="display: none;" id="selectedFile" class="form-control-file border-0" type="file" @onchange=@(async (e) => Image = await JsRuntime.InvokeAsync<string>("readFileAsBase64", fileUpload)) />
+
+                    @if (!string.IsNullOrEmpty(Image))
+                    {
+                        <br />
+                        <div class="btn-group-vertical">
+                            <button type="button" class="btn btn-secondary align-content-center" value="Remove" @onclick=@OnRemoveImage>Remove</button>
+                            <button type="button" class="btn btn-secondary align-content-center mt-2" value="Change" onclick="document.getElementById('selectedFile').click();" >Change</button>
+                        </div>
+
+                    }
+                    else
+                    {
+                        <br />
+                        <input type="button" class="btn btn-secondary align-content-center" value="Select" onclick="document.getElementById('selectedFile').click();" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+        ElementRef fileUpload;
+        string Image;
+
+    [Parameter]
+    public string ProjectId { get; set; }
+
+    [Parameter]
+    public string EntryId { get; set; }
+
+    public Entry SelectedEntry { get; set; }
+
+    // fields
+    public string TextContent { get; set; }
+    public string ImageContent { get; set; }
+    public string ImageFormat { get; set; }
+    public string Source { get; set; }
+    public string Tags { get; set; }
+
+
+    protected async override Task OnInitAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+             if (!string.IsNullOrEmpty(EntryId))
+            {
+                SelectedEntry = await DataService.GetEntriesById(EntryId, user.Identity.Name);
+            }
+        else
+        {
+            SelectedEntry = new Entry
+            {
+                Created = DateTime.Now,
+                ProjectId = ProjectId,
+                UserId = user.Identity.Name
+            };
+        }
+
+        TextContent = SelectedEntry.TextContent;
+        Source = SelectedEntry.Source;
+        Tags = string.Join(" ", SelectedEntry.Tags);
+        Image = SelectedEntry.ImageContent;
+        }
+       
+    }
+
+    public void OnRemoveImage(UIMouseEventArgs e)
+    {
+        Image = null;
+        this.StateHasChanged();
+    }
+
+    public async void OnSave(UIMouseEventArgs e)
+    {
+        SelectedEntry.Modified = DateTime.UtcNow;
+        SelectedEntry.TextContent = TextContent;
+        SelectedEntry.Source = Source;
+        SelectedEntry.Tags = Tags.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+        SelectedEntry.ImageContent = Image;
+
+        await DataService.SaveEntryAsync(SelectedEntry);
+
+        UriHelper.NavigateTo($"/project/{ProjectId}/entries", true);
+    }
+
+    public void OnCancel(UIMouseEventArgs e)
+    {
+        UriHelper.NavigateTo($"/project/{ProjectId}/entries", true);
+    }
+
+    public void OnFileSelected(UIMouseEventArgs e)
+    {
+        UriHelper.NavigateTo($"/project/{ProjectId}/entries", true);
+    }
+}
