@@ -21,10 +21,10 @@
 <div class="container">
     <div class="input-group">
         <input type="text" class="form-control" @bind=@Search aria-label="Search" />
-        <select id="select-box" @onchange=@OnPageSizeSelectionChange class="browser-default custom-select input-group-append col-md-1">
+        <select id="select-box" @onchange=@OnPageSizeSelectionChange class="browser-default custom-select input-group-append col-md-1 d-none d-lg-table-cell">
             <option value="10">10</option>
-            <option value="25" selected>25</option>
-            <option value="50">50</option>
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
             <option value="100">100</option>
         </select>
         <select id="select-box" @onchange=@OnSortSelectionChange class="browser-default custom-select input-group-append col-md-2">
@@ -32,7 +32,7 @@
             <option value="created" selected>Created</option>
             <option value="edited">Edited</option>
         </select>
-        <select id="select-box" @onchange=@OnOrderSelectionChange class="browser-default custom-select input-group-append col-md-2">
+        <select id="select-box" @onchange=@OnOrderSelectionChange class="browser-default custom-select input-group-append col-md-2 d-none d-lg-table-cell">
             <option value="descending" selected>Descending</option>
             <option value="ascending">Ascending</option>
         </select>
@@ -157,7 +157,7 @@
     public string Id { get; set; }
 
     public string Search { get; set; }
-    public int PageSize { get; set; } = 25;
+    public int PageSize { get; set; } = 50;
     public string Sort { get; set; } = "created";
     public string Order { get; set; } = "descending";
     public int CharacterLimit { get; set; } = 1000;

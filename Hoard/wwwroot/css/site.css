@@ -117,6 +117,12 @@ app {
     }
 }
 
+.container
+{
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
 @media (min-width: 768px) {
     app {
         flex-direction: row;
