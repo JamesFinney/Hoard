@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="BlazorStrap" Version="1.0.0-preview7-02" />
-    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="log4net" Version="2.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="3.0.0-preview7.19365.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.0.0-preview7.19365.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.0.0-preview7.19365.7" />
